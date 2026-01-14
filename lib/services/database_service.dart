@@ -111,6 +111,38 @@ class DatabaseService {
     await db.delete('trips');
   }
 
+  // Optimized method to save all trips and locations in a single transaction
+  Future<void> saveTrips(List<Trip> trips, Function(double) onProgress) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      for (var i = 0; i < trips.length; i++) {
+        final trip = trips[i];
+        
+        // Insert trip using the transaction
+        final tripId = await txn.insert('trips', trip.toMap());
+        
+        // Batch insert locations for this trip
+        final batch = txn.batch();
+        if (trip.locations != null) {
+          for (final loc in trip.locations!) {
+            batch.insert('locations', {
+              'trip_id': tripId,
+              'timestamp': loc.timestamp.millisecondsSinceEpoch,
+              'latitude': loc.latitude,
+              'longitude': loc.longitude,
+              'accuracy': loc.accuracy,
+            });
+          }
+        }
+        await batch.commit(noResult: true);
+        
+        if (i % 10 == 0) {
+          onProgress(i / trips.length);
+        }
+      }
+    });
+  }
+
   Future<void> close() async {
     final db = await database;
     await db.close();

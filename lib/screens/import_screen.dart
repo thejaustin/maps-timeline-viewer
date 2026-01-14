@@ -132,31 +132,14 @@ class _ImportScreenState extends State<ImportScreen> {
       });
       _addLog('Saving to database...');
 
-      final db = DatabaseService.instance;
-      for (var i = 0; i < trips.length; i++) {
-        final trip = trips[i];
-        final tripId = await db.insertTrip(trip);
-
-        // Update trip_id for all locations
-        final tripLocations = trip.locations!.map((loc) {
-          return Location(
-            tripId: tripId,
-            timestamp: loc.timestamp,
-            latitude: loc.latitude,
-            longitude: loc.longitude,
-            accuracy: loc.accuracy,
-          );
-        }).toList();
-
-        await db.insertLocations(tripLocations);
-
-        if ((i + 1) % 10 == 0) {
+      await DatabaseService.instance.saveTrips(trips, (progress) {
+        if (mounted) {
           setState(() {
-            _progress = 0.85 + (i / trips.length) * 0.15;
-            _statusMessage = 'Saved ${i + 1} / ${trips.length} trips';
+            _progress = 0.85 + progress * 0.15;
+            _statusMessage = 'Saved ${(_progress * 100).toInt()}% of trips';
           });
         }
-      }
+      });
 
       _addLog('Database saved successfully');
 
