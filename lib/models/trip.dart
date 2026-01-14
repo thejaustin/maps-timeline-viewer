@@ -7,6 +7,19 @@ enum TripType {
   multiDay,     // spans multiple days (road trips)
 }
 
+enum ViewMode {
+  timeline,      // Original timeline view
+  allTime,       // Show all trips regardless of date
+  byState,       // Group trips by state
+  byCity,        // Group trips by city
+  statistics,    // Statistics view
+  heatmap,       // Heatmap view
+  calendar,      // Calendar view
+  route,         // Route-focused view
+  activity,      // Activity-based view
+  favorites,     // Favorite locations view
+}
+
 class Trip {
   final int? id;
   final DateTime startTime;

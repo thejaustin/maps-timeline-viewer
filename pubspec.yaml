@@ -1,7 +1,7 @@
 name: maps_timeline_viewer
-description: A beautiful Google Maps Timeline viewer with Material 3 design
+description: A beautiful Google Maps Timeline viewer with Material 3 design and advanced features
 publish_to: 'none'
-version: 1.0.1+2
+version: 2.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -30,6 +30,9 @@ dependencies:
 
   # Material Design
   material_color_utilities: ^0.11.1
+
+  # Reactive programming
+  rxdart: ^0.27.7
 
 dev_dependencies:
   flutter_test:

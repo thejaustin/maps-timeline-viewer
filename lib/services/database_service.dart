@@ -46,6 +46,7 @@ class DatabaseService {
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
         accuracy INTEGER NOT NULL,
+        address TEXT,
         FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE
       )
     ''');
@@ -54,6 +55,9 @@ class DatabaseService {
     await db.execute('CREATE INDEX idx_trips_time ON trips (start_time, end_time)');
     await db.execute('CREATE INDEX idx_locations_trip ON locations (trip_id)');
     await db.execute('CREATE INDEX idx_locations_time ON locations (timestamp)');
+    await db.execute('CREATE INDEX idx_locations_lat_lng ON locations (latitude, longitude)');
+    await db.execute('CREATE INDEX idx_trips_type ON trips (type)');
+    await db.execute('CREATE INDEX idx_locations_address ON locations (address)');
   }
 
   Future<int> insertTrip(Trip trip) async {
@@ -82,6 +86,30 @@ class DatabaseService {
     return result.map((map) => Trip.fromMap(map)).toList();
   }
 
+  // Paginated query for large datasets
+  Future<List<Trip>> getTripsInRangePaginated(DateTime start, DateTime end, {int offset = 0, int limit = 50}) async {
+    final db = await database;
+    final result = await db.query(
+      'trips',
+      where: 'start_time <= ? AND end_time >= ?',
+      whereArgs: [end.millisecondsSinceEpoch, start.millisecondsSinceEpoch],
+      orderBy: 'start_time ASC',
+      offset: offset,
+      limit: limit,
+    );
+    return result.map((map) => Trip.fromMap(map)).toList();
+  }
+
+  // Get trip count for range
+  Future<int> getTripCountInRange(DateTime start, DateTime end) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM trips WHERE start_time <= ? AND end_time >= ?',
+      [end.millisecondsSinceEpoch, start.millisecondsSinceEpoch],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
   Future<List<Location>> getLocationsForTrip(int tripId) async {
     final db = await database;
     final result = await db.query(
@@ -91,6 +119,30 @@ class DatabaseService {
       orderBy: 'timestamp ASC',
     );
     return result.map((map) => Location.fromMap(map)).toList();
+  }
+
+  // Paginated query for locations in a trip
+  Future<List<Location>> getLocationsForTripPaginated(int tripId, {int offset = 0, int limit = 100}) async {
+    final db = await database;
+    final result = await db.query(
+      'locations',
+      where: 'trip_id = ?',
+      whereArgs: [tripId],
+      orderBy: 'timestamp ASC',
+      offset: offset,
+      limit: limit,
+    );
+    return result.map((map) => Location.fromMap(map)).toList();
+  }
+
+  // Get location count for a trip
+  Future<int> getLocationCountForTrip(int tripId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM locations WHERE trip_id = ?',
+      [tripId],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<List<Trip>> getAllTrips() async {
@@ -131,6 +183,7 @@ class DatabaseService {
               'latitude': loc.latitude,
               'longitude': loc.longitude,
               'accuracy': loc.accuracy,
+              'address': loc.address,
             });
           }
         }

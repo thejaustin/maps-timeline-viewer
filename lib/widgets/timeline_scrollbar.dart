@@ -43,12 +43,13 @@ class _TimelineScrollbarState extends State<TimelineScrollbar> {
     return Container(
       height: 120,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        color: theme.cardTheme.color,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
@@ -56,26 +57,56 @@ class _TimelineScrollbarState extends State<TimelineScrollbar> {
         children: [
           // Zoom controls
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
               children: [
-                Text(
-                  '${DateFormat.MMMd().format(widget.startDate)} - ${DateFormat.MMMd().format(widget.endDate)}',
-                  style: theme.textTheme.titleSmall,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${DateFormat.MMMd().format(widget.startDate)} - ${DateFormat.MMMd().format(widget.endDate)}',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.remove),
-                  iconSize: 20,
-                  onPressed: _zoomOut,
-                  tooltip: 'Zoom out',
-                ),
-                Text(_zoomLevelText),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  iconSize: 20,
-                  onPressed: _zoomIn,
-                  tooltip: 'Zoom in',
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove),
+                        iconSize: 18,
+                        onPressed: _zoomOut,
+                        tooltip: 'Zoom out',
+                        splashRadius: 20,
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          _zoomLevelText,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        iconSize: 18,
+                        onPressed: _zoomIn,
+                        tooltip: 'Zoom in',
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -117,19 +148,53 @@ class _TimelineScrollbarState extends State<TimelineScrollbar> {
         children: [
           // Date label
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            padding: const EdgeInsets.symmetric(vertical: 6.0),
             child: Column(
               children: [
-                Text(
-                  DateFormat.E().format(date),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isToday
+                        ? theme.colorScheme.primaryContainer
+                        : theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    DateFormat.E().format(date),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                      color: isToday
+                          ? theme.colorScheme.onPrimaryContainer
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-                Text(
-                  DateFormat.d().format(date),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                const SizedBox(height: 2),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isToday
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.surfaceContainer,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isToday
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.outlineVariant,
+                      width: isToday ? 2 : 1,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      DateFormat.d().format(date),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: isToday ? FontWeight.bold : FontWeight.w600,
+                        color: isToday
+                            ? theme.colorScheme.onPrimary
+                            : theme.colorScheme.onSurface,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -149,11 +214,28 @@ class _TimelineScrollbarState extends State<TimelineScrollbar> {
                       return GestureDetector(
                         onTap: () => widget.onTripTapped(trip.id!),
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 2),
-                          height: 8,
+                          margin: const EdgeInsets.only(bottom: 3),
+                          height: 10,
                           decoration: BoxDecoration(
-                            color: isSelected ? trip.color : trip.color.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(2),
+                            color: isSelected
+                                ? trip.color
+                                : trip.color.withOpacity(0.4),
+                            borderRadius: BorderRadius.circular(3),
+                            border: Border.all(
+                              color: isSelected
+                                  ? trip.color
+                                  : trip.color.withOpacity(0.6),
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: trip.color.withOpacity(0.3),
+                                      blurRadius: 4,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
+                                : [],
                           ),
                         ),
                       );

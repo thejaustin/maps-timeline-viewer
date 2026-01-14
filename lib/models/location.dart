@@ -8,6 +8,7 @@ class Location {
   final double latitude;
   final double longitude;
   final int accuracy;
+  final String? address;
 
   Location({
     this.id,
@@ -16,6 +17,7 @@ class Location {
     required this.latitude,
     required this.longitude,
     required this.accuracy,
+    this.address,
   });
 
   LatLng get latLng => LatLng(latitude, longitude);
@@ -34,6 +36,7 @@ class Location {
       'latitude': latitude,
       'longitude': longitude,
       'accuracy': accuracy,
+      'address': address,
     };
   }
 
@@ -45,6 +48,7 @@ class Location {
       latitude: map['latitude'] as double,
       longitude: map['longitude'] as double,
       accuracy: map['accuracy'] as int,
+      address: map['address'] as String?,
     );
   }
 
