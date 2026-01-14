@@ -44,13 +44,24 @@ android {
         applicationId "com.example.maps_timeline_viewer"
         minSdk 21
         targetSdk 34
-        versionCode flutterVersionCode.toInteger()
+        versionCode project.hasProperty('buildNumber') ? project.property('buildNumber').toInteger() : flutterVersionCode.toInteger()
         versionName flutterVersionName
+    }
+
+    signingConfigs {
+        release {
+            storeFile file('upload-keystore.jks')
+            storePassword 'android'
+            keyAlias 'upload'
+            keyPassword 'android'
+        }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }
