@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../services/json_parser.dart';
@@ -39,18 +40,21 @@ class _ImportScreenState extends State<ImportScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        icon: const Icon(Icons.storage),
         title: const Text('Existing Data Found'),
         content: Text('Found $count locations in database. Load existing data or import new file?'),
         actions: [
           TextButton(
             onPressed: () {
+              HapticFeedback.lightImpact();
               Navigator.pop(context);
               _clearAndImport();
             },
             child: const Text('Import New'),
           ),
-          FilledButton(
+          FilledButton.tonal(
             onPressed: () {
+              HapticFeedback.mediumImpact();
               Navigator.pop(context);
               _loadExistingData();
             },
@@ -67,7 +71,10 @@ class _ImportScreenState extends State<ImportScreen> {
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const MapScreen()),
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const MapScreen(),
+          transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+        ),
       );
     }
   }
@@ -84,6 +91,7 @@ class _ImportScreenState extends State<ImportScreen> {
     );
 
     if (result != null && result.files.single.path != null) {
+      HapticFeedback.mediumImpact();
       _importFile(result.files.single.path!);
     }
   }
@@ -107,6 +115,9 @@ class _ImportScreenState extends State<ImportScreen> {
           _statusMessage = progress.message;
           _addLog(progress.message);
         });
+        if (progress.progress >= 0.7) {
+          HapticFeedback.selectionClick();
+        }
       });
 
       final locations = await JsonParserService.parseFile(filePath, progressController);
@@ -149,6 +160,7 @@ class _ImportScreenState extends State<ImportScreen> {
         _statusMessage = 'Complete!';
       });
       _addLog('Import complete!');
+      HapticFeedback.heavyImpact();
 
       await Future.delayed(const Duration(seconds: 1));
 
@@ -158,17 +170,25 @@ class _ImportScreenState extends State<ImportScreen> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const MapScreen()),
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => const MapScreen(),
+            transitionsBuilder: (_, animation, __, child) => FadeTransition(opacity: animation, child: child),
+          ),
         );
       }
     } catch (e) {
       _addLog('ERROR: $e');
+      HapticFeedback.vibrate();
       setState(() {
         _statusMessage = 'Error: $e';
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Import failed: $e')),
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Import failed: $e'),
+            action: SnackBarAction(label: 'Retry', onPressed: _pickFile),
+          ),
         );
       }
     } finally {
@@ -188,84 +208,177 @@ class _ImportScreenState extends State<ImportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.map,
-                  size: 80,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Maps Timeline Viewer',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Import your Google Maps Timeline data',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 500),
+          child: _isImporting ? _buildImportingState() : _buildInitialState(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInitialState() {
+    return Center(
+      key: const ValueKey('initial'),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TweenAnimationBuilder(
+              tween: Tween<double>(begin: 0, end: 1),
+              duration: const Duration(seconds: 1),
+              builder: (context, double value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: Transform.scale(
+                    scale: 0.5 + (value * 0.5),
+                    child: child,
+                  ),
+                );
+              },
+              child: Icon(
+                Icons.map,
+                size: 100,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Maps Timeline Viewer',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Import your Google Maps Timeline data',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
+            ),
+            const SizedBox(height: 64),
+            FilledButton.icon(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                _pickFile();
+              },
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+              icon: const Icon(Icons.file_upload_outlined),
+              label: const Text('Select JSON File'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImportingState() {
+    return Center(
+      key: const ValueKey('importing'),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Card(
+          elevation: 0,
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: _progress),
+                  duration: const Duration(milliseconds: 300),
+                  builder: (context, value, child) {
+                    return Column(
+                      children: [
+                        LinearProgressIndicator(
+                          value: value,
+                          borderRadius: BorderRadius.circular(8),
+                          minHeight: 12,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          '${(value * 100).toInt()}%',
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-                const SizedBox(height: 48),
-                if (!_isImporting) ...[
-                  FilledButton.icon(
-                    onPressed: _pickFile,
-                    icon: const Icon(Icons.file_upload),
-                    label: const Text('Select JSON File'),
+                const SizedBox(height: 24),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Text(
+                    _statusMessage,
+                    key: ValueKey(_statusMessage),
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                ] else ...[
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          LinearProgressIndicator(value: _progress),
-                          const SizedBox(height: 16),
-                          Text(
-                            _statusMessage,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 24),
-                          Container(
-                            height: 200,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: const EdgeInsets.all(12),
-                            child: ListView.builder(
-                              reverse: true,
-                              itemCount: _logs.length,
-                              itemBuilder: (context, index) {
-                                final logIndex = _logs.length - 1 - index;
-                                return Text(
-                                  _logs[logIndex],
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 12,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                ),
+                const SizedBox(height: 32),
+                Container(
+                  height: 150,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                ],
+                  padding: const EdgeInsets.all(16),
+                  child: ListView.builder(
+                    reverse: true,
+                    itemCount: _logs.length,
+                    itemBuilder: (context, index) {
+                      final logIndex = _logs.length - 1 - index;
+                      return FadeInLog(
+                        key: ValueKey(_logs[logIndex]),
+                        message: _logs[logIndex],
+                      );
+                    },
+                  ),
+                ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class FadeInLog extends StatelessWidget {
+  final String message;
+  const FadeInLog({super.key, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 400),
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Text(
+              message,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 11,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.8),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/timeline_provider.dart';
 import '../widgets/trip_map.dart';
@@ -13,15 +14,28 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         title: const Text('Timeline Map'),
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            _scaffoldKey.currentState?.openDrawer();
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterDialog,
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _showFilterDialog();
+            },
           ),
         ],
       ),
@@ -33,8 +47,20 @@ class _MapScreenState extends State<MapScreen> {
           }
 
           if (!provider.hasData) {
-            return const Center(
-              child: Text('No data available. Please import a file.'),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.map_outlined, size: 64, opacity: 0.5),
+                  const SizedBox(height: 16),
+                  const Text('No data available. Please import a file.'),
+                  const SizedBox(height: 24),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Back to Import'),
+                  ),
+                ],
+              ),
             );
           }
 
@@ -45,97 +71,21 @@ class _MapScreenState extends State<MapScreen> {
                   trips: provider.selectedTrips,
                 ),
               ),
-              TimelineScrollbar(
-                allTrips: provider.visibleTrips,
-                selectedTripIds: provider.selectedTripIds,
-                startDate: provider.startDate ?? DateTime.now(),
-                endDate: provider.endDate ?? DateTime.now(),
-                onDateRangeChanged: (start, end) {
-                  provider.setDateRange(start, end);
-                },
-                onTripTapped: (tripId) {
-                  provider.toggleTripVisibility(tripId);
-                },
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTripDrawer() {
-    return Drawer(
-      child: Consumer<TimelineProvider>(
-        builder: (context, provider, child) {
-          return Column(
-            children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Trips',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${provider.visibleTrips.length} trips',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: provider.selectAllTrips,
-                        child: const Text('Select All'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: provider.deselectAllTrips,
-                        child: const Text('Clear'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: provider.visibleTrips.length,
-                  itemBuilder: (context, index) {
-                    final trip = provider.visibleTrips[index];
-                    final isSelected = provider.selectedTripIds.contains(trip.id);
-
-                    return CheckboxListTile(
-                      value: isSelected,
-                      onChanged: (_) {
-                        provider.toggleTripVisibility(trip.id!);
-                      },
-                      title: Text(trip.typeString),
-                      subtitle: Text(
-                        '${_formatDateTime(trip.startTime)}\n'
-                        '${trip.durationString} • ${trip.locationCount} points',
-                      ),
-                      secondary: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: trip.color,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    );
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: 120,
+                child: TimelineScrollbar(
+                  allTrips: provider.visibleTrips,
+                  selectedTripIds: provider.selectedTripIds,
+                  startDate: provider.startDate ?? DateTime.now(),
+                  endDate: provider.endDate ?? DateTime.now(),
+                  onDateRangeChanged: (start, end) {
+                    HapticFeedback.selectionClick();
+                    provider.setDateRange(start, end);
+                  },
+                  onTripTapped: (tripId) {
+                    HapticFeedback.selectionClick();
+                    provider.toggleTripVisibility(tripId);
                   },
                 ),
               ),
@@ -146,59 +96,133 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  Widget _buildTripDrawer() {
+    return NavigationDrawer(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(28, 16, 16, 10),
+          child: Text(
+            'Timeline Trips',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ),
+        Consumer<TimelineProvider>(
+          builder: (context, provider, child) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.tonal(
+                          onPressed: () {
+                            HapticFeedback.mediumImpact();
+                            provider.selectAllTrips();
+                          },
+                          child: const Text('Select All'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            provider.deselectAllTrips();
+                          },
+                          child: const Text('Clear'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(indent: 28, endIndent: 28),
+                SizedBox(
+                  height: MediaQuery.of(context).size.height - 250,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: provider.visibleTrips.length,
+                    itemBuilder: (context, index) {
+                      final trip = provider.visibleTrips[index];
+                      final isSelected = provider.selectedTripIds.contains(trip.id);
+
+                      return NavigationDrawerDestination(
+                        icon: Icon(
+                          isSelected ? Icons.check_circle : Icons.circle_outlined,
+                          color: isSelected ? trip.color : null,
+                        ),
+                        label: Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(trip.typeString),
+                              Text(
+                                '${_formatDateTime(trip.startTime)} • ${trip.locationCount} pts',
+                                style: Theme.of(context).textTheme.labelSmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+      onDestinationSelected: (index) {
+        final provider = context.read<TimelineProvider>();
+        final trip = provider.visibleTrips[index];
+        HapticFeedback.selectionClick();
+        provider.toggleTripVisibility(trip.id!);
+      },
+    );
+  }
+
   void _showFilterDialog() {
     final provider = context.read<TimelineProvider>();
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Filter Trips'),
-        content: Column(
+      showDragHandle: true,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.only(bottom: 24.0),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            RadioListTile<TripType?>(
-              value: null,
-              groupValue: provider.filterType,
-              onChanged: (value) {
-                provider.setFilterType(value);
-                Navigator.pop(context);
-              },
-              title: const Text('All Trips'),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('Filter Trips', style: Theme.of(context).textTheme.titleLarge),
             ),
-            RadioListTile<TripType?>(
-              value: TripType.singleDrive,
-              groupValue: provider.filterType,
-              onChanged: (value) {
-                provider.setFilterType(value);
-                Navigator.pop(context);
-              },
-              title: const Text('Single Drives'),
-            ),
-            RadioListTile<TripType?>(
-              value: TripType.daily,
-              groupValue: provider.filterType,
-              onChanged: (value) {
-                provider.setFilterType(value);
-                Navigator.pop(context);
-              },
-              title: const Text('Daily Trips'),
-            ),
-            RadioListTile<TripType?>(
-              value: TripType.multiDay,
-              groupValue: provider.filterType,
-              onChanged: (value) {
-                provider.setFilterType(value);
-                Navigator.pop(context);
-              },
-              title: const Text('Road Trips'),
-            ),
+            _buildFilterOption(null, 'All Trips', provider),
+            _buildFilterOption(TripType.singleDrive, 'Single Drives', provider),
+            _buildFilterOption(TripType.daily, 'Daily Trips', provider),
+            _buildFilterOption(TripType.multiDay, 'Road Trips', provider),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildFilterOption(TripType? type, String label, TimelineProvider provider) {
+    final isSelected = provider.filterType == type;
+    return ListTile(
+      leading: Icon(isSelected ? Icons.radio_button_checked : Icons.radio_button_off),
+      title: Text(label),
+      selected: isSelected,
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        provider.setFilterType(type);
+        Navigator.pop(context);
+      },
+    );
+  }
+
   String _formatDateTime(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }
