@@ -49,17 +49,30 @@ android {
     }
 
     signingConfigs {
-        release {
-            storeFile file('upload-keystore.jks')
+        if (file('upload-keystore.jks').exists()) {
+            release {
+                storeFile file('upload-keystore.jks')
+                storePassword 'android'
+                keyAlias 'upload'
+                keyPassword 'android'
+            }
+        }
+        debug {
+            // Default debug keystore properties
+            storeFile file("${System.getProperty('user.home')}/.android/debug.keystore")
             storePassword 'android'
-            keyAlias 'upload'
             keyPassword 'android'
+            keyAlias 'androiddebugkey'
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (file('upload-keystore.jks').exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled false
             shrinkResources false
         }

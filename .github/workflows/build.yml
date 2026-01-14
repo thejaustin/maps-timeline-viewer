@@ -32,6 +32,14 @@ jobs:
       - name: Generate Launcher Icons
         run: dart run flutter_launcher_icons
 
+      - name: Set up signing for release build
+        run: |
+          if [ -f "android/app/upload-keystore.jks" ]; then
+            echo "Signing enabled with upload-keystore.jks"
+          else
+            echo "Keystore not found, build will use debug signing"
+          fi
+
       - name: Build APK
         run: flutter build apk --release --build-number=${{ github.run_number }} --dart-define=BUILD_NUMBER=${{ github.run_number }}
 
