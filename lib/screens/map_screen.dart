@@ -43,7 +43,7 @@ class _MapScreenState extends State<MapScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.map_outlined, size: 64, opacity: 0.5),
+                  Icon(Icons.map_outlined, size: 64, color: Colors.grey.withOpacity(0.5)),
                   const SizedBox(height: 16),
                   const Text('No data available. Please import a file.'),
                   const SizedBox(height: 24),
