@@ -37,13 +37,6 @@ class _TripMapWidgetState extends State<TripMapWidget> {
   void initState() {
     super.initState();
     _loadTripLocations();
-
-    // Listen for map camera changes to update zoom level
-    _mapController.onPositionChanged.listen((position) {
-      setState(() {
-        _currentZoom = position.zoom;
-      });
-    });
   }
 
   @override
@@ -162,6 +155,13 @@ class _TripMapWidgetState extends State<TripMapWidget> {
               initialZoom: 12,
               minZoom: 3,
               maxZoom: 18,
+              onPositionChanged: (camera, hasGesture) {
+                if (camera.zoom != _currentZoom) {
+                  setState(() {
+                    _currentZoom = camera.zoom;
+                  });
+                }
+              },
             ),
             children: [
               TileLayer(
@@ -439,7 +439,7 @@ class _TripMapWidgetState extends State<TripMapWidget> {
             point: trip.locations!.first.latLng,
             width: 180,
             height: 36,
-            anchorPos: AnchorPos.align(AnchorAlign.top),
+            alignment: Alignment.topCenter,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -503,7 +503,7 @@ class _TripMapWidgetState extends State<TripMapWidget> {
             point: trip.locations!.last.latLng,
             width: 180,
             height: 36,
-            anchorPos: AnchorPos.align(AnchorAlign.top),
+            alignment: Alignment.topCenter,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -579,7 +579,7 @@ class _TripMapWidgetState extends State<TripMapWidget> {
                   point: location.latLng,
                   width: 180,
                   height: 36,
-                  anchorPos: AnchorPos.align(AnchorAlign.top),
+                  alignment: Alignment.topCenter,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
@@ -748,7 +748,7 @@ class _TripMapWidgetState extends State<TripMapWidget> {
     if (box == null) return;
 
     final localPosition = box.globalToLocal(globalPosition);
-    final mapPosition = _mapController.camera.toGeoPoint(localPosition);
+    final mapPosition = _mapController.camera.pointToLatLng(math.Point(localPosition.dx, localPosition.dy));
 
     // Check if tap is near any polyline
     for (final trip in widget.trips) {
