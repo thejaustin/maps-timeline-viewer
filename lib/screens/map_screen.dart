@@ -20,188 +20,10 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<TimelineProvider>();
     return Scaffold(
       key: _scaffoldKey,
-      appBar: Consumer<TimelineProvider>(
-        builder: (context, provider, child) {
-          if (_isSearching) {
-            return AppBar(
-              title: TextField(
-                autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Search trips...',
-                  border: InputBorder.none,
-                ),
-                onChanged: (value) {
-                  provider.setSearchQuery(value);
-                },
-                onSubmitted: (value) {
-                  // Close search when submitted
-                  setState(() {
-                    _isSearching = false;
-                  });
-                },
-              ),
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  setState(() {
-                    _isSearching = false;
-                  });
-                  provider.setSearchQuery(''); // Clear search
-                },
-              ),
-              actions: [
-                if (provider.searchQuery.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      provider.setSearchQuery('');
-                    },
-                  ),
-              ],
-            );
-          } else {
-            return AppBar(
-              title: const Text('Timeline Map'),
-              leading: IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  _scaffoldKey.currentState?.openDrawer();
-                },
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    setState(() {
-                      _isSearching = true;
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.filter_list),
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    _showFilterDialog();
-                  },
-                ),
-                PopupMenuButton<ViewMode>(
-                  icon: const Icon(Icons.view_carousel),
-                  onSelected: (ViewMode mode) {
-                    HapticFeedback.lightImpact();
-                    context.read<TimelineProvider>().setViewMode(mode);
-                  },
-                  itemBuilder: (BuildContext context) => <PopupMenuEntry<ViewMode>>[
-                    PopupMenuItem<ViewMode>(
-                      value: ViewMode.timeline,
-                      child: Row(
-                        children: [
-                          Icon(_getViewModeIcon(ViewMode.timeline)),
-                          const SizedBox(width: 8),
-                          const Text('Timeline View'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<ViewMode>(
-                      value: ViewMode.allTime,
-                      child: Row(
-                        children: [
-                          Icon(_getViewModeIcon(ViewMode.allTime)),
-                          const SizedBox(width: 8),
-                          const Text('All Time View'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<ViewMode>(
-                      value: ViewMode.byState,
-                      child: Row(
-                        children: [
-                          Icon(_getViewModeIcon(ViewMode.byState)),
-                          const SizedBox(width: 8),
-                          const Text('By State View'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<ViewMode>(
-                      value: ViewMode.byCity,
-                      child: Row(
-                        children: [
-                          Icon(_getViewModeIcon(ViewMode.byCity)),
-                          const SizedBox(width: 8),
-                          const Text('By City View'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<ViewMode>(
-                      value: ViewMode.statistics,
-                      child: Row(
-                        children: [
-                          Icon(_getViewModeIcon(ViewMode.statistics)),
-                          const SizedBox(width: 8),
-                          const Text('Statistics View'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<ViewMode>(
-                      value: ViewMode.heatmap,
-                      child: Row(
-                        children: [
-                          Icon(_getViewModeIcon(ViewMode.heatmap)),
-                          const SizedBox(width: 8),
-                          const Text('Heatmap View'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<ViewMode>(
-                      value: ViewMode.calendar,
-                      child: Row(
-                        children: [
-                          Icon(_getViewModeIcon(ViewMode.calendar)),
-                          const SizedBox(width: 8),
-                          const Text('Calendar View'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<ViewMode>(
-                      value: ViewMode.route,
-                      child: Row(
-                        children: [
-                          Icon(_getViewModeIcon(ViewMode.route)),
-                          const SizedBox(width: 8),
-                          const Text('Route View'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<ViewMode>(
-                      value: ViewMode.activity,
-                      child: Row(
-                        children: [
-                          Icon(_getViewModeIcon(ViewMode.activity)),
-                          const SizedBox(width: 8),
-                          const Text('Activity View'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<ViewMode>(
-                      value: ViewMode.favorites,
-                      child: Row(
-                        children: [
-                          Icon(_getViewModeIcon(ViewMode.favorites)),
-                          const SizedBox(width: 8),
-                          const Text('Favorites View'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          }
-        },
-      ),
+      appBar: _buildAppBar(context, provider),
       drawer: _buildTripDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -259,8 +81,7 @@ class _MapScreenState extends State<MapScreen> {
                   children: [
                     // Main content based on view mode
                     switch (provider.viewMode) {
-                      case ViewMode.timeline:
-                        Stack(
+                      ViewMode.timeline => Stack(
                           children: [
                             Column(
                               children: [
@@ -329,8 +150,7 @@ class _MapScreenState extends State<MapScreen> {
                               ),
                           ],
                         ),
-                      case ViewMode.allTime:
-                        Column(
+                      ViewMode.allTime => Column(
                           children: [
                             Expanded(
                               child: TripMapWidget(
@@ -368,21 +188,13 @@ class _MapScreenState extends State<MapScreen> {
                             ),
                           ],
                         ),
-                      case ViewMode.byState:
-                      case ViewMode.byCity:
-                        _buildGeographicView(provider),
-                      case ViewMode.statistics:
-                        _buildStatisticsView(provider),
-                      case ViewMode.heatmap:
-                        _buildHeatmapView(provider),
-                      case ViewMode.calendar:
-                        _buildCalendarView(provider),
-                      case ViewMode.route:
-                        _buildRouteView(provider),
-                      case ViewMode.activity:
-                        _buildActivityView(provider),
-                      case ViewMode.favorites:
-                        _buildFavoritesView(provider),
+                      ViewMode.byState || ViewMode.byCity => _buildGeographicView(provider),
+                      ViewMode.statistics => _buildStatisticsView(provider),
+                      ViewMode.heatmap => _buildHeatmapView(provider),
+                      ViewMode.calendar => _buildCalendarView(provider),
+                      ViewMode.route => _buildRouteView(provider),
+                      ViewMode.activity => _buildActivityView(provider),
+                      ViewMode.favorites => _buildFavoritesView(provider),
                     },
                   ],
                 ),
@@ -498,22 +310,15 @@ class _MapScreenState extends State<MapScreen> {
                       final trip = tripsToShow[index];
                       final isSelected = provider.selectedTripIds.contains(trip.id);
 
-                      return NavigationDrawerDestination(
-                        icon: Icon(
+                      return ListTile(
+                        leading: Icon(
                           isSelected ? Icons.check_circle : Icons.circle_outlined,
                           color: isSelected ? trip.color : null,
                         ),
-                        label: Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(trip.typeString),
-                              Text(
-                                '${_formatDateTime(trip.startTime)} • ${trip.locationCount} pts',
-                                style: Theme.of(context).textTheme.labelSmall,
-                              ),
-                            ],
-                          ),
+                        title: Text(trip.typeString),
+                        subtitle: Text(
+                          '${_formatDateTime(trip.startTime)} • ${trip.locationCount} pts',
+                          style: Theme.of(context).textTheme.labelSmall,
                         ),
                         onTap: () {
                           HapticFeedback.selectionClick();
@@ -592,7 +397,7 @@ class _MapScreenState extends State<MapScreen> {
       case ViewMode.statistics:
         return Icons.bar_chart;
       case ViewMode.heatmap:
-        return Icons.heat_map;
+        return Icons.gradient;
       case ViewMode.calendar:
         return Icons.calendar_month;
       case ViewMode.route:
@@ -601,6 +406,184 @@ class _MapScreenState extends State<MapScreen> {
         return Icons.directions_walk;
       case ViewMode.favorites:
         return Icons.bookmark;
+    }
+  }
+
+  AppBar _buildAppBar(BuildContext context, TimelineProvider provider) {
+    if (_isSearching) {
+      return AppBar(
+        title: TextField(
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Search trips...',
+            border: InputBorder.none,
+          ),
+          onChanged: (value) {
+            provider.setSearchQuery(value);
+          },
+          onSubmitted: (value) {
+            setState(() {
+              _isSearching = false;
+            });
+          },
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            setState(() {
+              _isSearching = false;
+            });
+            provider.setSearchQuery('');
+          },
+        ),
+        actions: [
+          if (provider.searchQuery.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: () {
+                provider.setSearchQuery('');
+              },
+            ),
+        ],
+      );
+    } else {
+      return AppBar(
+        title: const Text('Timeline Map'),
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            _scaffoldKey.currentState?.openDrawer();
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              setState(() {
+                _isSearching = true;
+              });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              _showFilterDialog();
+            },
+          ),
+          PopupMenuButton<ViewMode>(
+            icon: const Icon(Icons.view_carousel),
+            onSelected: (ViewMode mode) {
+              HapticFeedback.lightImpact();
+              context.read<TimelineProvider>().setViewMode(mode);
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<ViewMode>>[
+              PopupMenuItem<ViewMode>(
+                value: ViewMode.timeline,
+                child: Row(
+                  children: [
+                    Icon(_getViewModeIcon(ViewMode.timeline)),
+                    const SizedBox(width: 8),
+                    const Text('Timeline View'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<ViewMode>(
+                value: ViewMode.allTime,
+                child: Row(
+                  children: [
+                    Icon(_getViewModeIcon(ViewMode.allTime)),
+                    const SizedBox(width: 8),
+                    const Text('All Time View'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<ViewMode>(
+                value: ViewMode.byState,
+                child: Row(
+                  children: [
+                    Icon(_getViewModeIcon(ViewMode.byState)),
+                    const SizedBox(width: 8),
+                    const Text('By State View'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<ViewMode>(
+                value: ViewMode.byCity,
+                child: Row(
+                  children: [
+                    Icon(_getViewModeIcon(ViewMode.byCity)),
+                    const SizedBox(width: 8),
+                    const Text('By City View'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<ViewMode>(
+                value: ViewMode.statistics,
+                child: Row(
+                  children: [
+                    Icon(_getViewModeIcon(ViewMode.statistics)),
+                    const SizedBox(width: 8),
+                    const Text('Statistics View'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<ViewMode>(
+                value: ViewMode.heatmap,
+                child: Row(
+                  children: [
+                    Icon(_getViewModeIcon(ViewMode.heatmap)),
+                    const SizedBox(width: 8),
+                    const Text('Heatmap View'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<ViewMode>(
+                value: ViewMode.calendar,
+                child: Row(
+                  children: [
+                    Icon(_getViewModeIcon(ViewMode.calendar)),
+                    const SizedBox(width: 8),
+                    const Text('Calendar View'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<ViewMode>(
+                value: ViewMode.route,
+                child: Row(
+                  children: [
+                    Icon(_getViewModeIcon(ViewMode.route)),
+                    const SizedBox(width: 8),
+                    const Text('Route View'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<ViewMode>(
+                value: ViewMode.activity,
+                child: Row(
+                  children: [
+                    Icon(_getViewModeIcon(ViewMode.activity)),
+                    const SizedBox(width: 8),
+                    const Text('Activity View'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<ViewMode>(
+                value: ViewMode.favorites,
+                child: Row(
+                  children: [
+                    Icon(_getViewModeIcon(ViewMode.favorites)),
+                    const SizedBox(width: 8),
+                    const Text('Favorites View'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
     }
   }
 
@@ -1260,7 +1243,7 @@ class _MapScreenState extends State<MapScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.heat_map, size: 64, color: Colors.grey),
+          Icon(Icons.gradient, size: 64, color: Colors.grey),
           SizedBox(height: 16),
           Text(
             'Heatmap View',

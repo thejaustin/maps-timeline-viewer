@@ -156,9 +156,10 @@ class _TripMapWidgetState extends State<TripMapWidget> {
               minZoom: 3,
               maxZoom: 18,
               onPositionChanged: (camera, hasGesture) {
-                if (camera.zoom != _currentZoom) {
+                final newZoom = camera.zoom ?? _currentZoom;
+                if (newZoom != _currentZoom) {
                   setState(() {
-                    _currentZoom = camera.zoom;
+                    _currentZoom = newZoom;
                   });
                 }
               },
